@@ -1,6 +1,6 @@
 {
   "port": "5801",
   "document_root": "public",
-  "image_path" : "logs",
+  "image_path" : "logs"
 }
 

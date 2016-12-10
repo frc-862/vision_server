@@ -54,7 +54,7 @@ public:
       save_images(false) 
       {
         vision_setup();
-    }
+      }
 
     void http_get(struct mg_connection *nc, struct http_message *hm) override;
 
@@ -82,7 +82,7 @@ private:
     grip::Pipeline pipeline;
     cv::VideoCapture capture; 
     cv::Mat camera_frame;
-    cv::Mat segmented_image;
+    cv::Mat segmented_frame;
 		std::vector<std::vector<cv::Point>> contours;
     Json::Value contour_info;
 
@@ -126,6 +126,7 @@ void VisionServer::process_camera_data() {
   if (camera_frame.data) {
     pipeline.setsource0(camera_frame);
     pipeline.Process();
+		segmented_frame = *pipeline.gethslThresholdOutput();
     // todo 
     // save segmented image
     // track image time
@@ -149,7 +150,7 @@ void VisionServer::write_target_info() {
         last_write = last_capture;
 
         string fname = image_path + std::to_string(++counter); // + ".png";
-        imwrite((fname + ".png").c_str(), segmented_image);
+        imwrite((fname + ".png").c_str(), segmented_frame);
         ofstream of(fname + ".json");
         of << contour_info;
     }
@@ -179,7 +180,7 @@ void VisionServer::http_get(struct mg_connection *nc, struct http_message *hm) {
         }
 
     } else if (if_segmented_route(uri)) {
-        if (!segmented_image.empty()) {
+        if (!segmented_frame.empty()) {
             send_mjpeg_header(nc, segmented);
         } else {
             send_http_error(nc, 404, "Not Found");
@@ -220,7 +221,7 @@ void VisionServer::idle(mg_connection *nc) {
         break;
 
     case segmented:
-        send_image(nc, segmented_image);
+        send_image(nc, segmented_frame);
         break;
     }
 }
