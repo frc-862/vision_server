@@ -121,14 +121,50 @@ void VisionServer::check_camera_data() {
     //parse_target_info
 }
 
+struct contour_detail {
+  double area;
+  double solidity;
+  cv::Rect bounding_box; 
+  int centerX;
+  int centerY;
+
+  std::string toJSON() {
+    std::ostringstream json;
+   
+    json << "{ \"area\": " << area << 
+     ", \"solidity\": " << solidity <<
+     ", \"x\": " << bounding_box.x << 
+     ", \"y\": " << bounding_box.y << 
+     ", \"height\": " << bounding_box.height << 
+     ", \"width\": " << bounding_box.width << 
+     ", \"centerX\": " << centerX << 
+     ", \"centerY\": " << centerY << "}";
+
+    return json.str();
+  }
+};
+
 void VisionServer::process_camera_data() {
   capture >> camera_frame;
+
   if (camera_frame.data) {
     pipeline.setsource0(camera_frame);
     pipeline.Process();
 		segmented_frame = *pipeline.gethslThresholdOutput();
+		contours = *pipeline.getconvexHullsOutput();
+
+    std::vector<contour_detail> details;
+    for (auto contour : contours) {
+       contour_detail detail;
+       detail.area = cv::contourArea(contour);
+       detail.bounding_box = cv::boundingRect(contour);
+       detail.solidity = detail.area / detail.bounding_box.width * detail.bounding_box.height;
+       detail.centerX = detail.bounding_box.x + detail.bounding_box.width / 2;
+       detail.centerY = detail.bounding_box.y + detail.bounding_box.height / 2;
+       details.push_back(detail);
+    }
+
     // todo 
-    // save segmented image
     // track image time
     // save contours
   }
